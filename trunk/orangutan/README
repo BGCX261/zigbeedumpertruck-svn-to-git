@@ -1,0 +1,14 @@
+This software was developed to control a dumper truck, which receives commands from computer over a ZigBee network. The software is developed to run on an Orangutan SV-328 Robot Controller.
+
+Dependencies:
+
+Pololu AVR Library (tested with version 100326) available from:
+http://www.pololu.com/docs/0J20
+
+AVR libc
+avr-gcc (for compiling)
+avra
+binutils-avr
+avrdude (for programming the device)
+
+The program can be compiled by typing make. The device can be programmed with avrdude by typing make program. You may need to change the PROGRAMMER and PORT variables in the Makefile to correspond to the programmer used and the port the programmer is connected to.

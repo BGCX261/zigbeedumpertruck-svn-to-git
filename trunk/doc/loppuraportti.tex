@@ -1,0 +1,381 @@
+\documentclass[a4paper,12pt]{article}
+
+\usepackage[latin1]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[finnish]{babel}
+\usepackage{graphicx}
+\usepackage[plainpages=false,pdfpagelabels]{hyperref}
+\usepackage{url}
+
+\begin{document}
+
+\tableofcontents
+\newpage
+
+\section{Johdanto}
+Projektityön tavoitteena oli rakentaa langaton ZigBee-ohjausverkko kauko-ohjattavalle kuorma-autolle (kts. Kuva~\ref{fig:dumper}). Autoa ohjataan tietokoneelle ohjelmoidun käyttöliittymän kautta. Autoon liitetty mikrokontrolleri ohjaa auton liikkumista tietokoneelta lähetettyjen komentojen perusteella. Sekä auton mikrokontrolleriin että tietokoneeseen on liitetty ZigBee-moduulit, joiden välityksellä kommunikointi tapahtuu. Auton ohjaus tapahtuu näppäimistöllä.
+
+\begin{figure}
+ \begin{center}
+  \includegraphics*[scale=0.9]{fig/dumper.jpg}
+ \end{center}
+ \caption{Radio-ohjattava kuorma-auto}
+ \label{fig:dumper}
+\end{figure}
+
+\section{Projektin taustaa}
+Langattomat tiedosiirtoteknologiat tarjoavat nykyisin monia uusia mahdollisuuksia eri laitteiden välisen kommunikaation toteuttamiseen. Koko ajan kehittyvä teknologia tuottaa yhä edullisempia ja helppokäyttöisempiä laitteita ja standardeja. Tämän vuoksi houkutus kokeilla näitä ratkaisuja mitä erilaisimmissa ympäristöissä on suuri.
+
+Perinteinen tapa radio-ohjattavan auton ohjaamiseen käyttämällä perinteistä radio-ohjainta lähettämään analogista signaalia autolle on toki yksinkertainen toteuttaa, eikä nykypäivänä tällainen teknologia maksakaan paljoa. Kuitenkin siinä on monia ongelmia, mitkä pystytään voittamaan nykyisten langattomien digitaalisten tiedonsiirtoteknologioiden avulla. Näitä ongelmia ovat esimerkiksi analogisen lähetyksen heikompi signaali/kohina-suhde, minkä vuoksi vaaditaan huomattavasti korkeampia lähetystehoja.
+Myös jos laitteiston halutaan siirtävän myös muuta, kuin ohjausignaaleja, on digitaalisessa muodossa oleva data helpompi paketoida ja käsitellä lähetettäväksi digitaalisena. Eli ylimääräisiä A/D- tai D/A-muunnoksia ei tarvita.
+
+ZigBee-standardi saattaa ensi alkuun vaikuttaa hyvin eksoottiselta vaihtoehdolta reaaliaikaisen ohjausjärjestelmän toteuttamiseen. ZigBee ei ole erityisen tunnettu standardi varsinkaan verrattuna muihin langattomiin standardeihin kuten WiFiin tai Bluetoothiin. Myös sen yleisimmät käyttökohteet ovat perinteisesti koti- ja rakennusautomaation puolella. Nämä ennakkoasetelmat eivät kuitenkaan estä ZigBeen mahdollista menestyksellistä käyttöä juuri meidän projektimme kaltaisissa tilanteissa.
+
+ZigBee tarjoaa monia hyviä ominaisuuksia sekä mobiilikäyttöön, että reaaliaikaisen ohjausjärjestelmän toteuttamiseen. Esimerkkinä ensimmäisestä on ZigBee-moduulien pieni tehontarve. ZigBee-päätelaitteiden tehontarve on perinteisesti vain joitain kymmeniä milliwatteja. Tämä mahdollistaa pitkät käyttöajat ympäristöissä, joissa tarvittava energia otetaan esimerkiksi akuista. Toinen mobiilikäytön puolesta puhuva asia on alhainen hinta. Hinnaltaan vain muutamista euroista kymmeniin euroihin olevat laitteet ovat usein huomattavasti halvempia kuin esimerkiksi vastaavat WiFi-moduulit.
+
+Reaaliaikaohjauksen toteuttamisessa ZigBeen puolesta puhuu kommunikaation luotettavuus. Tämä on toteutettu pääasiassa kolmella eri tekniikalla. Ensimmäisenä on lähetyksen toteuttaminen siten, että laitteet kuuntelevat käytössä olevaa kanavaa, ja alkavat lähettää omaa dataansa vasta sitten kun kanavalla ei ole muuta liikennettä. Toinen tekniikka on pakettien vastaanottamisen kuittaus. Jos lähettävä laite ei saa vastaanottokuittausta lähettää se paketin uudelleen muutamaan kertaan ennen sen hylkäämistä. Kolmas tapa liittyy ZigBee-standardin mahdollistamaan verkkotopologiaan. Siinä viestit välitetään lähettäjältä vastaanottajalle verkoon liittyneenä olevien muiden noodien kautta. Jos viesti ei mene perille ensimmäistä reittiä pitkin on se mahdollista uudelleen lähettää vaihtoehtoista reittiä käyttäen.
+
+Projektin aihe on myös muutenkin mielenkiintoinen. Siinä yhdistyvät sopivalla tavalla tekninen tutkimus ja kokeilu uusiin asioihin perehdyttäessä sekä huvi siinä mielessä, että projektin kohteemmehan on käytännössä lelu tai harrastusväline. Näistä lähtökohdista alammekin mielenkiinnolla toteuttamaan projektiamme.
+
+\section{Projektisuunitelmat}
+ZigBee-tekniikka ei ollut projektin jäsenille entuudestaan tuttua, minkä vuoksi projekti aloitettiin tutustumalla ZigBee-standardiin. Tietysti näin lyhyessä ja nopeatempoisessa projektissa ei ole mahdollisuutta perehtyä kovin syvällisesti teknologiaan, mutta asetimmekin itsellemme tavoitteeksi saada perusymmärryksen käytettävästä standardista sekä käsittää sen heikkoudet ja vahvat puolet.
+
+Mikrokontrollereiden käyttämisestä ja tietokoneohjelmoinnista molemmilla oli etukäteen kohtuulliset taustatiedot, joten niihin perehtymiseen emme varanneet merkittävissä määrin aikaa vaan oletimme osaamisen olevan osin valmiina ja osin kehittyvän projektin edetessä. Koska kummallakaan ei ole erityisen vahvaa aikaisempaa kokemusta elektroniikkasuunnittelusta, päätimme käyttää aikaa suunnitteluvaiheessa siihen, että valitsisimme projektissa käytettäviksi elektronisiksi komponenteiksi helposti toisiinsa liitettäviä. Tämä liittämisen helppous pitäisi näkyä niin kommunikaatiorajapintojen kuin elektronisten ominaisuuksienkin puolella.
+
+Suunnitteluvaiheeseen kuuluu myös käytettävien komponenttien ja kytkentöjen miettimisen lisäksi alustava ohjelmistoarkkitehtuurin suunnittelu. Siihen päätimme paneutua aluksi ylimalkaisesti ja tarkentaa suunnitelmia sitä mukaa kun uusia tarpeita syntyy tai ongelmia ilmenee. Ensimmäisten ohjelmistoversioiden on tarkoitus olla karkeita ja helposti muokattavia luonnoksia. Ohjelmistojen hiomiseen täydellisemmiksi pystymme paneutumaan siinä vaiheessa, kun perustoiminnallisuudet ovat kasassa.
+
+Kuitenkin täytyy muistaa, että tämän kaltaisessa projektissa ei laitteisto- ja ohjelmistokehitystä ole mahdollista tehdä toisistaan erillään. Tämän vuoksi haluammekin päästä mahdollisimman aikaisessa vaiheessa testaamaan ohjelmistokomponenttejamme oikeilla laitteilla. Tarkoituksenamme onkin toteuttaa tilapäiset koekytkennät, joiden avulla voimme aloittaa testaamisen.
+
+Kun koekytkennät on todettu toimiviksi voidaan tehdä pysyvämpiä ratkaisuja. Siinä vaiheessa tavoitteenamme on toteuttaa esimerkiksi piirilevy mikrokontrollerin yhteyteen tulevalle XBee-moduulille. Myös mahdolliset johdotukset voidaan toteuttaa järkevämmin kunhan sopivat sijoituspaikat auton rungossa löydetään. Vaikka joudummekin purkamaan joitain autossa kiinni olevia aikaisemmista projekteista jääneitä komponentteja omiemme tieltä, pyrimme tuhoamaan näitä rakenteita mahdollisimman vähän, jotta auto olisi vielä joskus palautettavissa alkuperäiseen muotoonsa.
+
+Kun kytkennät ja elektroniset komponentit toimivat moitteetta voimme siirtyä ohjelmistokehitystyön kimppuun täysipainoisesti. Emme ole suunnitelleet ohjelmistolle mitään erityisiä ominaisuusvaatimuksia vaan haluamme toteuttaa asettamamme vaatimukset. Lisäominaisuuksia ohjelmistopuolella voidaan lisätä siinä vaiheessa jos ylimääräistä aikaa on käytettävissä.
+
+\section{Projektin toteutus}
+\subsection{Suunnittelu}
+Aloitimme projektimme toteuttamisen pitämällä pari suunnittelupalaveria. Niissä määrittelimme, mitä ominaisuuksia järjestelmässämme halusimme toteuttaa. Näiden ideoiden perusteella pystyimme päättämään tarvittavat komponentit ja osat sekä tekemään alustavaan aikataulun projektille. Ominaisuuksissa pyrimme pysymään kohtuuden ja oman osaamisemme rajoissa kuitenkin siten, että oppisimme myös jotain uutta eikä projektin toteuttaminen olisi puuduttavaa rutiinia. Seuraavassa on listattu projektissa toteutettavat pääasialliset ominaisuudet: 
+
+\begin{itemize}
+  \item \textbf{Ensisijaiset ominaisuudet}
+  \begin{itemize}
+    \item Auton pitää pystyä liikkumaan eteen- ja taaksepäin
+    \item Autoa pitää pystyä ohjaamaan
+    \item Ohjauskomennot lähetetään tietokoneella olevan käyttöliittymän avulla 
+    \item Tiedonsiirrossa käytetään ZigBee-verkkoa
+    \item Tiedonsiirron on oltava kahdensuuntaista 
+    \item Autoon on kiinnitetty lämpötila-anturi, jonka mittausinformaatio lähetetään tietokoneelle
+    \item Autossa on turvajärjestelmä joka pysäyttää auton toiminnan häiriötilanteessa
+  \end{itemize}
+  \item \textbf{Valinnaiset ominaisuudet}
+  \begin{itemize}
+    \item Autossa on varashälytin
+    \item Auto soittaa musiikkia
+    \item Autossa on alkeellista ajoautomaatiota
+  \end{itemize}
+\end{itemize}
+
+Näiden lähtökohtien perusteella pystyimme miettimään, mitä komponentteja ja ohjelmistoja toteutuksessa tarvitaan.
+
+\subsection{Osien tilaaminen}
+Kun olimme keskustelleet suunnitelmastamme ohjaajamme kanssa, siirryimme tutustumaan millaisia komponentteja ja ratkaisuja on tarjolla. Ohjaajamme vinkistä päätimme käyttää ZigBee moduuleina Digin XBee-moduuleja~\cite{xbee}. Ohjaajamme idea oli myös käyttää erillisen, itse toteutetun mikrokontrolleri-moottorinohjausjärjestelmän sijasta valmista Pololun Orangutan-robottioh\-jainta~\cite{orangutan}. Lämpötila-anturina käytimme molemmille entuudestaan tuttua Maximin DS18B20~\cite{ds18b20} 1-Wire lämpötila-anturia. Varashälyttimenä toimivaksi infra\-puna-anturiksi valitsimme SparkFunin tarjoaman valmiin moduulin, jonka jätimme kuitenkin lopullisesta toteutuksestamme pois. Lisäksi tarvitsimme johtoja ja muuta peruselektroniikkaa minkä tiesimme löytävämme laitoksen uumenista. Myöhemmissä luvuissa on esitelty tarkemmin eri osia ja niiden ominaisuuksia.
+
+\subsection{Elektroniikan toteutus}
+Kuten olimme uumoilleetkin riskianalyysiä tehdessämme, osatilaukset viivästyivät jonkin verran. ZigBee-moduulit toimitettiin kohtuullisessa ajassa, mutta Orangutan-robottiohjainta jouduimme odottamaan useiden viikkojen ajan. Halusimme kuitenkin päästä projetissamme alkuun ihan siitäkin syystä, että odottaessamme ajatuksemme pääsivät valloilleen ja olimme vähällä vaarantaa koko projektin realistisen toteutuksen keksiessämme koko ajan uusia ja uusia ominaisuuksia, joita halusimme toteutukseen lisätä.
+
+Tämän vuoksi aloitimme testausten tekemisen käyttämällä itsellämme olemassa olevia komponentteja niiltä osin kuin se oli mahdollista. ZigBee-moduulien välistä yhteyttä testasimmekin aluksi Juholta löytyvän mikrokontrollerin avulla. Saimme ensimmäiset tulokset tiedonsiirron toimivuudesta ja toteutuksen helppoudesta hyvin nopeasti bittien siirryttyä radioaaltojen kantamina pisteestä toiseen.
+
+Lopulta Orangutan-ohjainkin saapui ja pääsimme aloittamaan kokeilut oikeilla laitteilla. Tässä vaiheessa työtämme varjosti kuitenkin toinen viivytys. Petteri loukkasi jalkansa ja joutui jäämään sairaslomalle puoleksitoista kuukaudeksi. Koska alkuperäinen elektroniikkasuunnittelu ja toteutuksesta vastaaminen oli annettu Petterin vastuulle, työ pysähtyi Juhon diplomityökiireiden takia lähes kokonaan. Onneksi olimme ottaneet tämän huomioon suunnitelmia tehdessämme ja aikatauluja suunnitellessamme. Pystyimme helposti päättämään, että jätämme vähäpätöisempiä ominaisuuksia pois ja keskitämme kaikki liikenevät resurssimme tärkeimpien ominaisuuksien toteuttamiseen.
+
+Kun Juhon diplomityökiireet hellittivät, pääsi hän kokeilemaan Orangu\-tan-ohjainta ja tekemään alustavia testejä myös sillä. Ensimmäisissä kytkennöissä tarkoitus oli vain saada siirrettyä dataa mikrokontrollerin ja tietokoneen välillä. Tämä onnistuikin alusta pitäen kohtuullisen hyvin. Tietokoneelta mikrokontrollerille signaalit kulkivat vaivatta. Ongelmia tuli kuitenkin siinä vaiheessa kun signaali piti saada liikkumaan myös mikrokontrollerilta tietokoneelle.
+
+Tässä vaiheessa Petterikin oli päässyt takaisin projektin pariin. Suoritimme muutamia testejä oskilloskoopin kanssa ja huomasimme, että vika oli hyvin yksinkertainen. Koska mikrokontrollerin TX-pinnin jännite oli 5 volttia ja XBee-moduulin RX-sisääntulo toimi 3.3:n voltin jännitteellä, olimme asentaneet kytkennän väliin diodin alentamaan jännitettä. Oskilloskoopin avulla tutkittuamme huomasimme, että käyttämämme diodi ei ollut kuitenkaan tarpeeksi nopea ja aiheutti signaaliin niin pahan vääristymän, että XBee-moduuli ei ymmärtänyt sitä oikeaksi signaaliksi. Koska emme tähän hätään saaneet mistään käsiimme nopeampia RF-diodeja, kokeilimme tuloksetta myös muutamia muita vaihtoehtoja jännitetason muuntamiseksi. Lopulta uskaltauduimme harrastelijafoorumeiden varoituksista huolimatta kokeilemaan yhteyttä ilman jännitteenmuunnosta ja totesimme sen toimivan loistavasti.
+
+Seuraavaksi vuorossa oli lämpötila-anturin kytkeminen mikrokontrolleriin ja sen antaman mittausinformaation lähettäminen tietokoneelle. Tämä sujui heti alusta pitäen ongelmitta, ja saimme lämpömittarilta lukemia, joiden perusteella totesimme kytkennän toimivan.
+
+\subsection{Koeajo}
+Kommunikaatio- ja anturilaitteiston toiminnasta varmistuttuamme päätimme kytkeä robottiohjaimen kiinni auton ajo- ja servomoottoreihin. Ohjelmoimme yksinkertaisen testiohjelman, jonka avulla pystyimme käyttämään kontrollerin pwm-ominaisuutta sekä ohjaimen moottorienohjausyksikköä.
+
+Aluksi kaikki toimi kuten pitikin ja saimme käänneltyä auton eturenkaita sekä ajatettua autoa sekä eteen- että taaksepäin. Muutaman testin jälkeen kuitenkin eteemme tuli lisää ongelmia. Olimme suorittamassa ajonopeuskalibrointeja, kun Orangutanin moottorinohjausyksikkö hajosi. Wmme olleet kuormittaneet ohjausyksikköä mitenkään erityisesti, joten se hajosi ilmeisesti rakennevikaan. Emme pystyneet tarkemmin selvittämään vian lähdettä tai alkuperää. Huomasimme kuitenkin, että robottiohjaimen muut osajärjestelmät toimivat moitteetta lukuunottamatta akkujännitteen mittausta. Tämä toiminto sai mikrokontrollerin aina resetoimaan itsensä.
+
+Mietimme, pitäisikö meidän reklamoida robottiohjaimen valmistajalle asi\-asta ja lähettää tuote takuuhuoltoon tai vaihdettavaksi, mutta totesimme aikataulumme olevan liian tiukka ja päädyimme käyttämään ajomoottorin ohjauksessa autossa ollutta alkuperäistä ratkaisua. Alun perin moottorinohjaus oli toteutettu käyttämällä servomoottorin kääntelemää potentiometriä, joka rajoittaa virran kulkua moottoriin. Koska tiesimme, että servo-ohjauksen toteuttaminen valitsemallamme robottiohjaimella oli yksinkertaista, ei tässä muutoksessa kulunut paljoa ylimääräistä aikaa.
+
+Moottorinohjausmenetelmän muutos toi kuitenkin järjestelmäämme merkittävän haavoittuvuuden. Koska servomoottori sai käyttöjännitteensä robottiohjaimelta, robottiohjaimen syystä tai toisesta johtuva häiriötilanne tai sammuminen sai servon pysähtymään paikalleen ja jättämään ajomoottorin virransyötön sen hetkiseen asentoon. Toisaalta kyseinen ongelma toi meille mahdollisuuden testata ja toteuttaa suunnittelemaamme turvajärjestelmää paremmin.
+
+Moottorinohjauksen muutoksen jälkeen kaikki loput koeajot sujuivat suuremmitta murheitta ja pääsimme keskittymään seuraavaan vaiheeseen eli ohjelmistokehitykseen.
+
+\subsection{Ohjelmistokehitys}
+Viimeinen vaihe projektissamme ennen lopullista käyttötestausta, loppuasennusta ja demonstraatiota oli ohjelmistokehitys. Koska yhteinen käytettävissämme oleva aika oli rajattua, päätimme jakaa ohjelmistokehityksen vastuualueisiin. Koska Juholla oli tuoreempaa kokemusta mikrokontrolleriohjelmoinnista, päätimme että hän vastaa siitä puolesta Petterin keskittyessä käyttöliittymän ja ohjausohjelmiston koodaamiseen.
+
+Jotta kehittämämme ohjelmistot olisivat helposti molempien ryhmän jäsenten saatavilla ja muokattavissa, päätimme ottaa käyttöön versionhallinnan koodien tallentamiseen. Google Code tarjosi tähän tarkoitukseen hyvän ja helpon alustan, joten loimme sinne projektin nimellä \textit{zigbeedumpertruck}~\cite{googlecode}.
+
+Ensiaskeleet kummankin ohjelmisto-osan kehityksessä oli otettu jo testausvaiheessa. Olimme myös jo suunnitteluvaiheessa miettineet käytettäviä kommunikaatiorajapintoja, ja niiden implementointi olikin rutiininomaista. Pyrimme pitämään kehitysvaiheessa lähes päivittäin tapaamisia, joissa testasimme eri komponentteja oikean laitteiston kanssa. Tällä tavalla toimiessamme säästimme merkittävästi aikaa, koska pystyimme välittämään kaikki vastaan tulleet ongelmat ja rajapintoihin tehdyt muutokset toisillemme välittömästi. Myös erilaisten simulaatioiden ja yksikkötestien suorittamiselta vältyttiin.
+
+Saimmekin ohjelmistot käyttövarmuuden ja -mukavuuden tasolta tyydyttävälle tasolle juuri kaksi päivää ennen projektin lopullista demonstraatiota.
+
+\subsection{Loppuasennus}
+Koska projektimme loppupuoli oli melko kiireinen, emme ehtineet kiinnittämään erityistä huomiota esteettisiin seikkoihin. Halusimme kuitenkin tarjota edes jokseenkin viimmeistellyn näköisen tuotteen ja asensimme eri komponentit kiinni kuorma-autoon. Kuvassa~\ref{fig:lopputulos} näkyy auton runko siihen asennettuine osineen. Alkuperäisten katteiden kiinnittämistä emme ehtineet miettimään tarkemmin ja halusimme muutenkin jättää tässä vaiheessa rungon avoimeksi esittelytarkoitusta ja mahdollisten yllätävien vikojen helpompaa korjaamista varten.
+
+\begin{figure}
+ \begin{center}
+  \includegraphics*[scale=0.35]{fig/side_1.jpg}
+ \end{center}
+ \caption{Auton runko, johon on asennettu Orangutan-robottikontrolleri sekä XBee-moduuli liitäntäpiirilevyineen}
+ \label{fig:lopputulos}
+\end{figure}
+
+\subsection{Extraa}
+Projektidemonstraatiota edeltävänä päivänä Juho oli saanut idean liittää kännykkäkamera auton keulalle ja käyttää Åbo Akademissa projektityönä kehitettyjä Movino~\cite{movino} puhelin- ja serveriohjelmistoja videokuvan suoratoistamiseen ja käyttämiseen auton ohjauksessa. Puhelinohjelmisto on käytettävissä Symbian S60-käyttöjärjestel\-mällä toimivilla puhelimilla ja serveriohjelmistoa voi käyttää Linux-tietoko\-neissa. Itse kuvan toistamiseen käytimme VLC-mediasoitinta. Videokuvan siirtämiseen käytimme puhelimen ja tietokoneen välille muodostettua WLAN-yhteyttä.
+
+Saimme testin onnistumaan, mutta jostain syystä videokuvassa esiintyi suurta viivettä. Viive oli pahimmillan useita sekunteja ja teki sulavan ajamisen mahdottomaksi. Koska projektiin varattu aika oli tässä vaiheessa loppu, emme pystyneet perehtymään ongelmaan tarkemmin. Kokeilu antoi kuitenkin meille virikkeitä mahdollisia jatkokehitysideoita varten.
+
+\subsection{Aikataulu}
+Projektissa pysyttiin suhteellisen hyvin aikataulussa, vaikka joidenkin työpakettien osalta projektin aikataulu jonkin verran viivästyikin. Olimme kuitenkin ottaneet huomioon mahdolliset viivästykset alkuperäistä projektiaikataulua suunnitellessamme. Viivästyksistä huolimatta ehdimme saamaan projektin valmiiksi määräaikaan mennessä.
+
+Taulukossa~\ref{tab:tunnit} on esitetty projektin eri osa-alueet jaettuna työpaketeiksi sekä kuhunkin työpakettiin käytetty aika.
+
+\begin{table}
+ \begin{center}
+  \caption{Työpaketit ja niiden toteuttamiseen käytetty aika}
+  \label{tab:tunnit}
+  \begin{tabular}{|l|l|l|}
+  \hline
+  \textbf{Työpaketti} &               \textbf{Juho} & \textbf{Petteri} \\
+  \hline
+  Projektin suunnittelu                     & 22 h  & 22 h\\
+  \hline
+  Tutustuminen ZigBee-protokollaan          & 5 h   & 14 h\\
+  \hline
+  Elektroniikan suunnittelu ja toteutus     & 12 h  & 16 h\\
+  \hline
+  Mikrokontrollerin ohjelmointi             & 30 h  & 5 h\\
+  \hline
+  Ohjausohjelmiston ohjelmointi             & 6 h   & 22 h\\
+  \hline
+  Väliraportointi                           & 8 h   & 1 h\\
+  \hline
+  Ohjelmistojen testaus                     & 22 h  & 22 h\\
+  \hline
+  Dokumentointi ja tulosten esittäminen     & 15 h  & 12 h\\
+  \hline
+  Yhteensä                                  & 120 h  & 114 h\\
+  \hline
+  \end{tabular}
+ \end{center}
+\end{table}
+
+\subsection{Riskien toteutuminen}
+Projektin kulkua hidasti huomattavasti kaksi projektisuunnitelmassakin mahdolliseksi katsomaamme riskiä. Ensinnäkin komponenttien toimituksessa\linebreak esiintyi hieman odotettua pidempiä viiveitä. Tämä luonnollisesti esti käytännön testaamisen aloittamisen projektin alkuvaiheessa, kun ei ollut laitteistoa millä testata. Pian osien saapumisen jälkeen Petteri joitui jäämään sairaslomalle, eikä näinollen pysytynyt muutamaan viikkoon viemään projektia eteenpäin.
+
+Viivästymisten kompensoimiseksi päätimme karsia joitakin lisäominaisuuksia, joita olimme suunnitelleet autoon toteuttavamme. Esimerkiksi antureiden määrässä karsimme jättämällä pois peruutustutkaksi suunnittelemamme infrapuna-anturin.
+
+\section{Järjestelmäkuvaus}
+
+\subsection{Elektroniikka}
+
+\begin{figure}
+ \begin{center}
+  \includegraphics*[scale=0.4]{fig/orangutan.jpg}
+ \end{center}
+ \caption{Orangutan SV-328 robottikontrolleri}
+ \label{fig:orangutan}
+\end{figure}
+
+\begin{figure}
+ \begin{center}
+  \includegraphics*[scale=0.4]{fig/xbee.jpg}
+ \end{center}
+ \caption{XBee moduuli}
+ \label{fig:xbee}
+\end{figure}
+
+Elektroniikan osalta projektissa ei tarvinnut tehdä kovinkaan monimutkaisia piirejä, sillä Orangutan (esitetty kuvassa~\ref{fig:orangutan}) ja XBee-moduuli (kts. kuva~\ref{fig:xbee}) olivat helposti käyttöönotettavia valmiita paketteja. XBee-moduuli vaatii 3,3 voltin jännitteen, joten sille jouduimme rakentamaan jännitteenjakajan, joka pudottaa Orangutangin regulaattorin antaman 5 voltin jännitteen 3,3 voltin jännitteeksi. Kytkennän rakentaminen kytkentälevylle ei ollut mahdollista, sillä XBee-moduulin epästandardi 2 mm:n pinnijako ei ole yhteensopiva kytkentälevyjen 2,54 mm:n rasterin kanssa. Tämän vuoksi suunnittelimme ja valmistimme piirilevyn XBee moduulin vaatimia kytkentöjä varten. XBee-moduulin lisäksi asensimme piirilevylle myös DS18B20-lämpötila-anturin. Piirilevyn piirikaavio on esitetty kuvassa~\ref{fig:circuit} ja valmis piirilevy kuvassa~\ref{fig:board}. Taulukossa~\ref{tab:komponentit} on listattu kytkennässä käytetyt komponentit.
+
+\begin{table}
+\begin{center}
+\caption{ZigBee moduulin liitäntäalustassa käytetyt komponentit}
+\label{tab:komponentit}
+\begin{tabular}{|l| p{8cm} |}
+\hline
+\textbf{Tunnus} & \textbf{Komponentti} \\ \hline
+R1 & Vastus 50 $\Omega$ \\ \hline
+R2 & Vastus 100 $\Omega$ \\ \hline
+JP1 & 2-napainen rimaliitin virransyöttöä varten \\ \hline
+JP2 & 3-napainen rimaliitin UART ja lämpötila-anturin signaaleja varten \\ \hline
+IC1 & DS18B20 lämpötila-anturi \\ \hline
+XB1 & XBee WRL-08665 ZigBee-moduuli \\ \hline
+\end{tabular}
+\end{center}
+\end{table}
+
+
+\begin{figure}
+ \begin{center}
+  \includegraphics*[scale=1.0]{fig/schematic.png}
+ \end{center}
+ \caption{Piirikaavio XBee:n ja DS18B20:n kytkemiseen}
+ \label{fig:circuit}
+\end{figure}
+
+\begin{figure}
+ \begin{center}
+  \includegraphics*[scale=0.35]{fig/xbee_in_place.jpg}
+ \end{center}
+ \caption{Valmis piirilevy kiinnitettynä autoon}
+ \label{fig:board}
+\end{figure}
+
+
+\subsection{Kytkennät}
+Taulukossa~\ref{tab:pins} on esitetty Orangutanin kytkennät.
+
+\begin{table}
+ \begin{center}
+ \caption{Orangutangin kytkennät}
+ \label{tab:pins}
+ \begin{tabular}{|l|l|}
+  \hline
+  \textbf{Pinni} & \textbf{Laite} \\
+  \hline
+  PD0 & XBee-moduulin pinni 2 (DOUT) \\
+  PD1 & XBee-moduulin pinni 3 (DIN) \\
+  PC0 & DS18B20 lämpötila-anturi \\
+  PC1 & Varashälytin \\
+  PC2 & Ohjausservo \\
+  PC3 & Moottorinohjaimen servo \\
+  PC4 & - \\
+  PC5 & Nopeusanturi \\
+  \hline
+ \end{tabular}
+ \end{center}
+\end{table}
+
+
+\subsection{Mikrokontrolleriohjelmisto}
+Mikrokontrollerialustaksi valitulle Pololun Orangutan SV-328 kontrollerille on saatavana kattava avoimen lähdekoodin ohjelmistokirjasto~\cite{orangutanswlibs}, jota päätimme hyödyntää projektissa. Kirjaston kattavuuden vuoksi monia alemman tason ohjauksia (esim. servojen ohjaus, UART-kommunikaatio, ym.) ei tarvinnut ohjelmoida itse. Seuraavissa osioissa on esitelty mikrokontrolleriohjelmiston toiminnallisuudet.
+
+\subsubsection{Kommunikointi XBee-moduulin kanssa}
+Mikrokontrolleri kommunikoi XBee-moduulin kanssa UART sarjaliitäntännän välityksellä. UART-kommunikointi tapahtuu taustalla siten, että muu ohjelmisto voi jatkaa toimintaansa lähetyksen ja vastaanoton aikana. Sekä lähetettävälle että vastaanotetulle datalle on varattu puskurimuistia. Lähetyspuskuriin voi kirjoittaa uutta dataa vasta sen jälkeen kun edellinen viesti on lähetetty, eli ohjelmiston täytyy aina varmistaa, että lähetys on loppunut ennen uuden viestin lähetystä tiedon korruptoitumisen estämiseksi.
+
+Viestien vastaanotto tapahtuu määräajoin pollaamalla, onko puskuriin tullut uutta dataa. Puskurin täyttymisen estämiseksi pollausväli ei saa olla liian pitkä. Nykyisessä toteutuksessa tietokoneelta lähetettävät viestit ovat tosin niin lyhyitä (useimmat komennot yhden tai kahden tavun mittaisia) ja lähetysväli niin harva, ettei puskuri ainakaan ihan helpolla ehdi täyttymään.
+
+\subsubsection{Pulssisignaali}
+Koska auton ohjauskomennot lähetetään tietokoneelta langattomasti, on mahdollista että yhteys katkeaa milloin tahansa, jos auto esimerkiksi päätyy ZigBee verkon kantaman ulkopuolelle. Tällöin yleisen turvallisuuden takaamiseksi auton tulisi pysähtyä, ettei se aja hallitsemattomasti esimerkiksi ihmisten päälle. ZigBee-yhteyden toiminnan varmistamiseksi tietokoneohjelmisto lähettää pulssisignaalia 200 ms:n välein, jota tarkkailemalla mikrokontrolleri tietää yhteyden toimivan. Jos mikrokontrolleri ei vastaanota pulssisignaalia 500 millisekuntiin, Watchdog ajastin resetoi mikrokontrollerin, minkä yhteydessä auto pysäytetään.
+
+\subsubsection{Viestirajapinta}
+Jotta mikrokontrollerissa käytettävä ohjelmistopuoli olisi tarvittaessa helposti laajennettevissa, päätimme suunnitella mikrokontrollerin ja ohjausohjelmiston välille oman viestirajapinnan. Rajapinnan suunnittelussa tärkeimpinä asioina olivat rajapinnan helppokäyttöisyys, laajennettavuus sekä viestinnän nopeus. Emme kuitenkaan halunneet tehdä asiaa liian monimutkaiseksi joten päätimme käyttää OSI-mallin mukaisina alempina kerroksina ZigBee-moduuliemme valmiiksi tukemaa IEEE-802.15.4:n määrittelyä. Toisin sanottuna vain viestien tyypit on määritelty käyttötarkoitustemme mukaisesti. Viestit koostuvat viestityypin määräämästä ensimmäisestä tavusta sekä mahdollisista viestin sisältötavuista.
+
+Koska ZigBee-standardin mukaan lähetettävien pakettien maksimikoko on 74 tavua, mutta emme halunneet varata vielä koko kapasiteettia mahdollisten laajennosten vuoksi päätimme, että viesti voi koostua korkeintaan yhdestä viestityypin ilmaisevasta tavusta sekä 31:sta sisältötavusta. tällöin meillä on mahdollisuus määritellä 256 erilaista viestityyppiä, joissa kaikissa voi olla 31 tavua informaatiota mukana.
+
+Viestityyppien validiuden tarkastusta ja vääränmuotoisten viestien mahdollista hylkäämistä tai uudelleenlähettämispyyntöjä ei ole vielä tässä vaiheessa implementoitu ohjelmistoihin. Tällaisesta voisi kuitenkin olla hyötyä tilanteissa, joissa eri järjestelmät kommunikoivat keskenään ja ristiriitatilanteita on mahdollista syntyä.
+
+Kommunikointi tietokoneen ja auton välillä tapahtuu lähettämällä erityyppisiä viestejä. Määrittelemämme viestiprotokolla on seuraavanlainen:\linebreak viestin ensimmäinen tavu kertoo viestin tyypin, jonka jälkeen itse data on seuraavissa parametritavuissa. Osa viesteistä on yksitavuisia, kuten aiemmin selostamamme pulssisignaali. Nopeus ja ohjauskomennoissa toinen tavu kertoo asetettavan nopeus tai ohjausarvon. Nopeus voidaan asettaa väliltä [-10,10], jolloin -10 on täysi nopeus taaksepäin, 0 pysäyttää auton ja 10 on täysi nopeus eteenpäin. Ohjauskomennossa -10 kääntää etupyörät täysin vasemmalle, 0 suoristaa ja 10 kääntää etupyörät täysin oikealle.
+
+Kolmas dataa sisältävä viestityyppi on viestien kirjoitus Orangutangin LCD näytölle. Viestin tavut kirjoitetaan näytölle sellaisenaan ilman prosessointia. Rivinvaihtomerkki '\textbackslash n' siirtää kursorin toisen rivin alkuun ja merkki '\textbackslash 0' lopettaa viestin, minkä jälkeen voidaan lähettää seuraava komento.
+
+Tällä hetkellä rajapintaan on määriteltynä myös muutama muu komento. Tarkempi listaus on taulukossa~\ref{tab:protokolla}.
+
+\begin{table}
+\begin{center}
+\caption{Viestityypit}
+\label{tab:protokolla}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Viestityyppi} & \textbf{Tavu 1} & \textbf{Tavut 2-32} \\ \hline
+Heartbeat-signaali & 0x00 & - \\ \hline
+Nopeuden asetus    & 0x01 & signed char väliltä [-10, 10] \\ \hline
+Ohjauskulman asetus & 0x02 & signed char väliltä [-10, 10] \\ \hline
+Akkujännitteen lukeminen & 0x03 & - \\ \hline
+Lämpötilan lukeminen & 0x04 & - \\ \hline
+Viestin kirjoitus LCD:lle & 0x05 & ASCII viesti + '\textbackslash 0' \\ \hline
+Varashälytin päälle & 0x06 & - \\ \hline
+Varashälytin pois & 0x07 & - \\ \hline
+Watchdog päälle & 0x08 & - \\ \hline
+Nopeuden lukeminen & 0x09 & - \\ \hline
+\end{tabular}
+\end{center}
+\end{table}
+
+
+
+\subsubsection{Nopeuden mittaaminen}
+Auton kardaaniakseliin on kiinnitetty pulssianturi auton nopeuden mittaamiseksi. Pulssianturi antaa yhden pulssin jokaisella akselin pyörähdyksellä. Havaintojemme perusteella auton ajaessa maksiminopeutta pulsseja tulee noin seitsemän kappaletta sekunnissa.
+
+Pulssien havaitsemiseksi mikrokontrolleri on ohjelmoitu antamaan keskeytys nopeusmittarin pinnin vaihtaessa tilaansa. Keskeytyskäsittelijässä kasvatetaan pulssilaskurin arvoa, jonka arvo tallennetaan nopeusmuuttujaan ja laskurin arvo nollataan sekunnin välein. Sekunti määritellään mikrokontrollerilla käyttäen apuna ajastinta. Ajastimeen ei pystytä suoraan määrittelemään aikaväliksi yhtä sekuntia, joten on turvauduttava kiertotiehen. Ajastin toimii mikrokontrollerin kellotaajuuden, joka on 20 megahertsiä, perusteella. Ajastin toimii esikaalauskertoimella 1024, eli noin 20.000 kertaa sekunnissa. Jokaisella pulssilla se kasvattaa kahdeksan bitin kokoista rekisteriä yhdellä askeleella. Tämä aiheuttaa puskurin ylivuodon joka kahdennellasadallaviidennelläkymmenennellä kasvatuskerralla. Ylivuoto taas aiheuttaa keskeytyksen, jonka tarkoituksena on kasvattaa toista laskuria. Kun tämä laskuri saavuttaa arvon 76, on noin sekunti kulunut (20 000 000/1024/256$\approx$76). Nyt nopeuspulssien määrä voidaan lukea pulssilaskurirekisteristä ja tallentaa pysyvään muuttujaan. Tämän jälkeen nopeus voidaan pyytää mikrokontrollerilta, jolloin se lähettää muuttujan sisältämän sekunnin aikana tulleiden pulssien lukumäärän ohjauskoneelle.
+
+Menetelmä ei ole täysin tarkka, koska esimerkiksi jo sekunnin määritelmässä tulee pidemmässä yhtäjaksoisessa käytössä huomattavaa virhettä. Kuitenkin asiaa tarkemmin pohdittuamme tulimme siihen tulokseen että tarkkuus on vähintäänkin riittävä. Nopeusmittaukseen nimittäin aiheutuu paljon suurempaa virhettä esimerkiksi kiihdytyksissä, hidastukissa ja kaarteissa pyörien luistamisesta.
+
+\subsubsection{Lämpötilan mittaaminen}
+Lämpötilan mittaamiseen käytetään 1-Wire väylään kytkettyä DS18B20 läm\-pötila-anturia. Lämpötila voidaan lukea lähettämällä kontrollerille lämpötilan lukukäsky, jolloin mikrokontrolleri käskee lämpötila-anturia mittaamaan lämpötilan ja lukee mitatun lämpötilan anturilta. Anturilta luettu lämpötila on tarkkuudeltaan 12-bittinen ja se luetaan kahtena tavuna. Lämpötila on kahden komplementti muodossa ja 12 bitistä neljä vähiten merkitsevää ilmaisevat lämpötilan desimaaliosuuden. Lämpötila lähetetään tietokoneelle samassa muodossa kuin se on anturilta luettu.
+
+\subsubsection{Varashälytin}
+Varashälyttimenä käytetään infrapunaan perustuvaa liikkeentunnistina. Tunnistin ottaa virran päälle kytkemisen jälkeen huoneesta ``kuvan'', johon se vertaa myöhemmin otettuja näkymiä. Jos tunnistin havaitsee liikettä, se vetää datalinjan maihin. Hälytyksen tunnistamiseen mikrokontrolleri käyttää pinninmuutos keskeytystä. Jos mikrokontrolleri saa varashälyttimeltä tiedon varkaiden liikkumisesta auton ympäristössä, se soittaa Orangutangin summeria karkoittaakseen varkaat.
+
+Vaikka varashälytin onkin mainio lisävaruste kuorma-autoon, testiemme perusteella sen toiminta ei ollut kovin luotettava. Varashälytin antoi hälytyksiä melko satunnaisesti riippumatta siitä, oliko tunnistimen edessä liikettä vai ei. Tämä luultavasti johtuu anturin heikkouksista; ehkä infrapuna-anturi ei ole tähän käyttötarkoitukseen paras mahdollinen.
+
+
+\subsection{Ohjausohjelmisto ja käyttöliittymä}
+Ohjausohjelmiston käyttöjärjestelmäalustaksi valitsimme Linux-ympäristön. Tärkeimpinä syinä tähän oli ohjelmistokehityksen helppous ja saatavien avoimen lähdekoodin kirjastojen paljous. Ohjelmointikieleksi taas valitsimme C++ -kielen. C++:n vahvuudet tämän projektin kannalta ovat ensinnäkin kielen tehokkuus reaaliaikaisen järjestelmän toteuttamista ajatellen. Myös kielen tukema olio-paradigma sopii ajattelutapaamme sekä ohjelmiston että laitteiston modulaarisesta rakenteesta.
+
+Käytännössä ohjausohjelmisto ja käyttöliittymä jakaantuu muutamiin \linebreak osiin. Tällä hetkellä se rakentuu kahdesta eri luokasta. Ensimmäinen luokka on käyttöliittymän ydin ja toinen hoitaa kommunikaation sarjaliikenneportin ja ohjelmiston välillä. Käyttöliittymän ydin taas jakautuu näppäimistösyötteiden käsittelijään sekä heartbeat-signaalit tuottavaan ja lähettävään osaan.
+
+Näppäimistösyötteen lukija ja heartbeat-signaali pyörivät eri säikeissä, jotta voimme taata niille mahdollisimman hyvän ja toisistaan riippumattoman toiminnan. Varsinkin heartbeat-signaalin lähettäminen on aikakriittinen toimenpide. Jos signaali ei saavu mikrokontrollerille määräajassa, luulee ohjain virheellisesti, että yhteys on katkennut ja pysäyttää auton toiminnan. Määriteltyämme mikrokontrollerin watchdog-ajastimen laikaisuajaksi 500ms päätimme, että ohjausohjelmiston pitää lähettää signaaleja 200ms:n välein, jotta yhden pulssin hukkuminen ei vielä laukaise watchdogia mutta viive ei kuitenkaan veny liian suureksin todellisen häiriötilanteen sattuessa.
+
+Näppäimistösyötteen lukija käyttää hyväkseen SDL (Simple Direct Media Layer) kirjastoa, jonka kautta näppäimistösyötteiden lukeminen ja kontrollerilta saadun informaation näytölle tulostaminen on hoidettu. Alun pitäen tarkoituksenamme oli käyttää ohjaukseen analogista joystickiä, mutta koska emme ehtineet hankkimaan mistään tietokonetta, jossa olisi vielä vanhan mallinen peliohjainportti luovuimme ideasta ja toteutimme ohjauksen näppäimistöä käyttäen. Näin toteutuksesta tuli hieman kankea, mutta mielestämme se ajoi asiansa riittävän hyvin.
+
+Ajoneuvon ohjaus tapahtuu nuolinäppäinten avulla ja lisäksi muutamista kirjain- ja numeronäppäimistä saa käytettyä muita toimintoja taulukon~\ref{tab:keys} mukaisesti.
+
+\begin{table}
+\begin{center}
+\caption{Näppäinkomennot}
+\label{tab:keys}
+\begin{tabular}{l|l}
+\textbf{Näppäin} & \textbf{Toiminto} \\ \hline
+$\uparrow, \downarrow, \leftarrow, \rightarrow$ & Auton ohjaus \\
+V & Akkujännitteen lukeminen (ei toimi, kaataa mikrokontrollerin)  \\
+T & Lämpötilan lukeminen \\
+H & Watchdog päälle \\
+1, 2 ja 3 & Eteenpäinajonopeuden asetus \\
+4 ja 5 & Peruutusnopeuden asetus
+\end{tabular}
+\end{center}
+\end{table}
+
+Koska ohjelmistokehitykseen käytettävä aika oli niukka, jäi ohjelmiston lopulliseen toteutukseen parantamisen varaa. Koodin rakenne ei ole kovin selkeä, eikä luokka- ja toimintojakoa ole tehty mielestämme riitävän hyvin. Myös ohjelmiston säikeiden käyttö saattaa aiheuttaa yllättäviä ongelmia, koska eri säikeet käyttävät tällä hetkellä jaettuja resursseja. Näiden resurssien käyttöä ei kuitenkaan ole suojattu niiden edellyttävällä tavalla, esim. Mutexeja käyttämällä.
+
+Käyttöliittymä kuitenkin toimii riittävällä ja siltä vaatimallamme varmuudella ja tarjoaa jatkokehitysmahdollisuuden vaikka isommallekin projektille.
+
+\section{Yhteenveto}
+Mielestämme onnistuimme projektissamme hyvin. Vaikka kohtasimmekin joitain ongelmia matkamme varrella, olimme varautuneet niihin etukäteen ja pystyimmekin voittamaan ne. Myöskään missään vaiheessa ei tullut vastaan tilannetta, jossa olisimme tunteneet haukanneemme liian ison palan emmekä näin ollen joutuneet sellaiseen tilanteeseen, että olisimme joutuneet miettimään projektin keskeyttämistä.
+
+Kaikkiin ennalta asettamiimme tavoitteisiin emme päässeet, mutta suurin osa karsituista tavoitteista oli sellaisia, mitkä olimme alun pitäenkin määritelleet vähempiarvoisiksi ja valinnaisiksi tai sitten keksimme vaihtoehtoisen tavan toteuttaa tavoite. Suurin yksittäinen tavoite, josta jäimme oli ZigBee-ohjausverkon rakentaminen. Tämän tavoitteen jouduimme typistämään siten, että käytimme ohjaukseen vain kahden ZigBee-moduulin välistä point-to-point-yhteyttä. Se kuitenkin riitti näyttämään meille sen, että ZigBee-laitteita on mahdollista käyttää tietyin varauksin liikkuvan laitteen ohjaamiseen.
+
+Työnä projekti opetti meille hyvin paljon. Vaikka harva asia projektissamme oli meille täysin vierasta, opimme näkemään monet aiemmin erillisiltä tuntuneet asiat entistä selvemmin osana yhteistä kokonaisuutta. Aihevalinta oli myös sen verran mielenkiintoinen, että perehtyminen siihen sai itse asiassa meidät kiinnostumaan aihepiiristä entistä enemmän ja tekemään myös ylimääräistä ja syvällisempää tutkimusta asian tiimoilta.
+
+Koulukurssina pidämme tätä projektityötä erittäin onnistuneena. Se oli työmäärältään sopivasti mitoitettu ja molempien osallistujien aito kiinnostus aiheeseen teki kurssista opettavaisen kokonaisuuden. Myös kommunikaatio ja yhteistyö ohjaajan kanssa sujui loistavasti ja saimmekin häneltä runsaasti apua ja kannustusta koko projektin ajan.
+
+\section{Jatkotutkimus ja -kehityssuositukset}
+Projektin aikana saimme monia ideoita, joita emme pystyneet itse toteuttamaan. Haluammekin esitellä joitain mielestämme mielenkiintoisia jatkokehitysideoita. Nämä ideat ovat jo meidän päissämme osaltaan hautuneita ja annamme niiden mahdollisille toteuttajille parhaamme mukaan oman tukemme ja jaamme näkemyksemme asiasta. Ideat eivät ole minkäänlaisessa järjestyksessä, emmekä pidä mitään toista parempana tai järkevämpänä toteuttaa.
+
+Pohdimme pitkään, miten järjestelmästä saisi mahdollisimman modulaarisen ja ns. teollisuuskäyttöisen. Nähdäksemme laitteen pitäisi olla helposti laajennettavissa sekä ohjelmisto- että laitteistopuolelta. Omissa visioissamme tällaiseen tuotteeseen pitäisi pystyä lisäämään mikrokontrollerin I/O-kapasiteetin rajoissa uusia laitteita ja ottamaan laitteita käyttöön kääntämättä ja lataamatta ohjelmistoja joka kerta uudelleen. Ehdotammekin jatkokehityskohteeksi pääosin ohjelmistoprojektia, jossa toteutetaan mikrokontrolleriin ns. minikäyttöjärjestelmä, joka voi vastaanottaa langattoman yhteyden avulla esikäännettyjä ohjelmistomoduuleja ja ottamaan ne käyttöön käyttäjän haluamissa tilanteissa.
+
+Omalta osaltamme meiltä jäi tekemättä varsinainen ZigBee-ohjausverkko, joka hyödyntäisi ZigBee-standardin reitittäviä ominaisuuksia ja laajentaisi merkittävästi mahdollisia käyttöetäisyyksiä. Suosittelemmekin, että järjestelmän kehitystä jatketaan toteuttamalla tällainen ohjausverkko.
+
+Innostuimme itse kovasti projektin loppuvaiheessa kokeilemastamme auton ajamisesta kännykkäkameran välittämän kuvan avulla. Siinä oli kuitenkin vielä paljon ongelmia, jotka tekivät ajamisesta vielä käytännössä mahdotonta. Mielestämme mielenkiintoinen projekti olisi toteuttaa toimiva ja viiveetön järjestelmä videokuvan kuljettamiseen. Omassa toteutuksessamme käytimme tiedonsiirtoon WLAN-yhteyttä mutta näimme, että myös ZigBee-yhteyden avulla videokuvan siirtäminen voisi olla mahdollista.
+
+Jos edellinen jatkotutkimusaihe poikii jossain vaiheessa tulosta, voisi siitä seuraava vaihe olla videokuvan tunnistusalgoritmien ja ohjauslogiikan kehittäminen siten, että auto osaisi esimerkiksi seurata kävelevää ihmistä. Tämän toteuttaminen kuitenkin vaatii sen, että ajoneuvosta saadaan siirrettyä tarpeeksi hyvälaatuista videokuvaa ohjaustietokoneelle. Mikrokontrollerin suorituskyky on nimittäin liian vaatimaton niin raskaan laskemisen toteuttamiseen. Vaihtoehtoisena lähestymistapana voisi olla tutustuminen esimerkiksi mobiilimaailmassa käytettäviin kuvankäsittelypiireihin, kuten Texas Instrumentsin OMAP-piiri. Näiden avulla kuvankäsittelyn tekeminen itse kuorma-autossa voisi olla mahdollista.
+
+\begin{thebibliography}{1}
+\bibitem{ds18b20} DS18B20 Programmable Resolution 1-Wire Digital Thermometer. \url{http://www.maxim-ic.com/quick_view2.cfm?qv_pk=2812}
+
+\bibitem{movino} Johannes Berg, Martin Storsjö, Tom Sundström ja Johan Waaramäki. Movino. \url{http://www.movino.org/}
+
+\bibitem{orangutanswlibs} Pololu AVR C/C++ Library User's Guide. \url{http://www.pololu.com/docs/0J20}
+
+\bibitem{orangutan} Pololu -- Orangutan SV-328 Robot Controller.  \url{http://www.pololu.com/catalog/product/1227}
+
+\bibitem{googlecode} zigbeedumpertruck -- Project hosting on Google Code.\url{http://code.google.com/p/zigbeedumpertruck}
+
+\bibitem{xbee} ZigBee/Mesh -- End-to-End Wireless Modules, Adapters, Gateways -- Digi International. \url{http://www.digi.com/products/wireless/zigbee-mesh/}
+
+\end{thebibliography}
+
+\end{document}          
